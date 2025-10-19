@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from jose import JWTError, jwt
 import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User
+from app.models import User, UserRole
 from app.config import settings
 
 SECRET_KEY = settings.SECRET_KEY
@@ -51,4 +51,36 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 def get_current_active_user(current_user: User = Depends(get_current_user)):
+    return current_user
+
+def require_role(allowed_roles: List[UserRole]):
+    """
+    Dependency to check if the current user has one of the allowed roles.
+    Usage: current_user: User = Depends(require_role([UserRole.ADMIN]))
+    """
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required role: {[role.value for role in allowed_roles]}"
+            )
+        return current_user
+    return role_checker
+
+def require_admin(current_user: User = Depends(get_current_user)):
+    """Require Admin role"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+def require_manager_or_admin(current_user: User = Depends(get_current_user)):
+    """Require Manager or Admin role"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager or Admin access required"
+        )
     return current_user

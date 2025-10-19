@@ -1,16 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
 import './App.css';
-import Dashboard from './components/Dashboard';
+import AdminDashboard from './components/AdminDashboard';
+import ManagerDashboard from './components/ManagerDashboard';
+import DeveloperDashboard from './components/DeveloperDashboard';
 import Users from './components/Users';
 import Projects from './components/Projects';
 import Tasks from './components/Tasks';
 import Login from './components/Login';
 import Register from './components/Register';
 
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allowedRoles }) {
   const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  if (!token) {
+    return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" />;
+  }
+
+  return children;
+}
+
+function RoleBasedDashboard() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  switch(user.role) {
+    case 'Admin':
+      return <AdminDashboard />;
+    case 'Manager':
+      return <ManagerDashboard />;
+    case 'Developer':
+      return <DeveloperDashboard />;
+    default:
+      return <Navigate to="/login" />;
+  }
 }
 
 function NavBar() {
@@ -45,9 +72,19 @@ function NavBar() {
         <h1>Project Hub</h1>
         <div>
           <NavLink to="/">Dashboard</NavLink>
-          <NavLink to="/users">Users</NavLink>
-          <NavLink to="/projects">Projects</NavLink>
-          <NavLink to="/tasks">Tasks</NavLink>
+
+          {/* Show Users link for Admin and Manager */}
+          {(user?.role === 'Admin' || user?.role === 'Manager') && (
+            <NavLink to="/users">Users</NavLink>
+          )}
+
+          {/* Show Projects and Tasks for Admin and Manager */}
+          {(user?.role === 'Admin' || user?.role === 'Manager') && (
+            <>
+              <NavLink to="/projects">Projects</NavLink>
+              <NavLink to="/tasks">Tasks</NavLink>
+            </>
+          )}
         </div>
       </div>
       <div className="navbar-right">
@@ -84,10 +121,36 @@ function App() {
                 <NavBar />
                 <div className="container">
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/users" element={<Users />} />
-                    <Route path="/projects" element={<Projects />} />
-                    <Route path="/tasks" element={<Tasks />} />
+                    {/* Role-based Dashboard */}
+                    <Route path="/" element={<RoleBasedDashboard />} />
+
+                    {/* Admin and Manager can view users */}
+                    <Route
+                      path="/users"
+                      element={
+                        <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
+                          <Users />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Admin and Manager routes */}
+                    <Route
+                      path="/projects"
+                      element={
+                        <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
+                          <Projects />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tasks"
+                      element={
+                        <ProtectedRoute allowedRoles={['Admin', 'Manager']}>
+                          <Tasks />
+                        </ProtectedRoute>
+                      }
+                    />
                   </Routes>
                 </div>
               </ProtectedRoute>

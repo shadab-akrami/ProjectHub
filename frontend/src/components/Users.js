@@ -7,12 +7,20 @@ function Users() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     role: 'Developer',
     password: '',
   });
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setCurrentUser(JSON.parse(userData));
+    }
+  }, []);
 
   useEffect(() => {
     fetchUsers();
@@ -35,11 +43,20 @@ function Users() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Use the admin endpoint for creating users with proper role
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      await axios.post(`${API_URL}/register`, formData);
+      const token = localStorage.getItem('token');
+
+      await axios.post(`${API_URL}/users/`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
       setShowModal(false);
       setFormData({ name: '', email: '', role: 'Developer', password: '' });
       fetchUsers();
+      setError('');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to create user');
       console.error(err);
@@ -69,16 +86,26 @@ function Users() {
 
   if (loading) return <div className="loading">Loading...</div>;
 
+  const isAdmin = currentUser?.role === 'Admin';
+
   return (
     <div>
       <div className="page-header">
-        <h2>Users</h2>
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          Add User
-        </button>
+        <h2>{isAdmin ? 'User Management' : 'Team Members'}</h2>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            Add User
+          </button>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
+
+      {!isAdmin && (
+        <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
+          View all team members. Only Admins can create or delete users.
+        </p>
+      )}
 
       <div className="grid">
         {users.map((user) => (
@@ -90,12 +117,14 @@ function Users() {
                 {user.role}
               </span>
             </div>
-            <button
-              className="btn btn-danger btn-small"
-              onClick={() => handleDelete(user.id)}
-            >
-              Delete
-            </button>
+            {isAdmin && (
+              <button
+                className="btn btn-danger btn-small"
+                onClick={() => handleDelete(user.id)}
+              >
+                Delete
+              </button>
+            )}
           </div>
         ))}
       </div>

@@ -18,3 +18,10 @@ test.db
 node_modules/
 build/
 .pytest_cache/
+
+# Virtual environments (make sure all are excluded)
+app/venv/
+*/venv/
+
+# Database files
+project_management.db
