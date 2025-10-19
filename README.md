@@ -329,6 +329,6 @@ Test coverage includes:
 
 ## Contact
 
-**Name**: [Your Full Name]
-**Email**: [Your Email]
-**Phone**: [Your Contact Number]
+**Name**: Abdul Khadir Shehadab
+**Email**: shadabakrami@gmail.com
+**Phone**: +91 7975040823
